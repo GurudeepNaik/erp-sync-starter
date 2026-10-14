@@ -1,0 +1,7 @@
+.venv
+tests
+scripts
+**/__pycache__
+.github
+docker-compose*.yml
+Dockerfile

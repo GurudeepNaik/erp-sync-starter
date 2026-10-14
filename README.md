@@ -9,6 +9,9 @@ duplicate. A webhook arrives twice, or out of order, or never. Two workers updat
 customer. A change made by the sync bounces back as a "new" change and loops. Somebody edits
 the same field in both systems. This repository is a small, complete answer to each of those.
 
+**Live demo:** [erp-sync-demo.vercel.app](https://erp-sync-demo.vercel.app) — pick how badly the
+CRM should behave, run a scenario, and watch both systems end up identical anyway.
+
 ## Architecture
 
 ```mermaid
@@ -105,6 +108,17 @@ curl localhost:8000/metrics                   # outbox / inbox gauges (Prometheu
 docker compose run --rm worker check          # exit 0 when both systems agree
 docker compose run --rm worker backstop       # recover changes whose webhooks were lost
 ```
+
+### Chaos playground (the live demo)
+
+`src/erpsync/playground.py` runs one whole scenario inside a single request: it seeds customers,
+makes random edits on both sides while the in-process mock CRM returns 500s, 429s, commits-then-
+504s and loses replies, delivers webhooks duplicated, reordered and dropped, then drains the
+relay and inbox by hand, runs the backstop and compares both systems. Each run gets its own
+Postgres schema, dropped afterwards. It is the same relay, inbox and policy code the workers run;
+only the scheduling is manual. Deployed as one Vercel function (`api/index.py`) with a static
+page in `public/`; `scripts/deploy-vercel.sh` deploys it. Needs a Postgres reachable without a
+transaction pooler (the schema is set per session), e.g. Neon's non-pooling URL.
 
 Dev mode (source mounted, API and workers restart on code changes, Postgres on `localhost:5436`):
 

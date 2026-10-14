@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{tests/**,scripts/**,.venv/**,.github/**,docker-compose*.yml,Dockerfile,uv.lock}"
+    }
+  },
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index?__path=$1" }]
+}

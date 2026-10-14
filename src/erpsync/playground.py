@@ -446,7 +446,13 @@ def run_scenario(database_url: str, scenario: Scenario, budget_s: float = 45) ->
             database_url,
             min_size=1,
             max_size=3,
-            kwargs={"row_factory": dict_row, "options": f"-c search_path={schema}"},
+            # autocommit: single statements cost one round trip instead of BEGIN/stmt/COMMIT.
+            # Explicit `conn.transaction()` blocks in the relay and inbox still run as usual.
+            kwargs={
+                "row_factory": dict_row,
+                "options": f"-c search_path={schema}",
+                "autocommit": True,
+            },
             open=True,
         )
         try:

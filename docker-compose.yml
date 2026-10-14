@@ -1,0 +1,47 @@
+x-sync-env: &sync-env
+  ERPSYNC_DATABASE_URL: postgresql://erpsync:erpsync@db:5432/erpsync
+  ERPSYNC_CRM_URL: http://crm:8001
+  ERPSYNC_WEBHOOK_SECRET: ${WEBHOOK_SECRET:-local-demo-secret}
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: erpsync
+      POSTGRES_USER: erpsync
+      POSTGRES_PASSWORD: erpsync
+    ports: ["5433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erpsync"]
+      interval: 3s
+      retries: 20
+
+  migrate:
+    build: .
+    command: ["migrate"]
+    environment: *sync-env
+    depends_on:
+      db: { condition: service_healthy }
+
+  crm:
+    build: .
+    command: ["crm-mock", "--port", "8001", "--webhook-url", "http://api:8000/webhooks/crm",
+              "--secret", "${WEBHOOK_SECRET:-local-demo-secret}"]
+    ports: ["8001:8001"]
+
+  api:
+    build: .
+    command: ["api", "--port", "8000"]
+    environment: *sync-env
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  worker:
+    build: .
+    command: ["worker", "--relays", "2"]
+    environment: *sync-env
+    deploy:
+      replicas: 2   # two processes x two relay threads: leases keep them apart
+    depends_on:
+      migrate: { condition: service_completed_successfully }

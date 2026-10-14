@@ -1,0 +1,30 @@
+# Dev mode: source mounted, API and worker restart on code changes, Postgres on a local port.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# API http://localhost:8020/docs · mock CRM http://localhost:8021/docs · Postgres localhost:5436
+services:
+  db:
+    ports: !override ["5436:5432"]
+
+  migrate:
+    volumes:
+      - ./src:/app/src
+
+  crm:
+    # Not auto-reloaded: the mock CRM keeps its data in memory, so a restart would wipe it.
+    ports: !override ["8021:8001"]
+
+  api:
+    entrypoint: ["uvicorn", "erpsync.service:create_app", "--factory", "--reload",
+                 "--reload-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000"]
+    command: []
+    ports: !override ["8020:8000"]
+    volumes:
+      - ./src:/app/src
+
+  worker:
+    entrypoint: ["watchfiles", "--filter", "python", "erpsync worker --relays 2", "/app/src"]
+    command: []
+    deploy:
+      replicas: 1
+    volumes:
+      - ./src:/app/src

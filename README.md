@@ -106,6 +106,15 @@ docker compose run --rm worker check          # exit 0 when both systems agree
 docker compose run --rm worker backstop       # recover changes whose webhooks were lost
 ```
 
+Dev mode (source mounted, API and workers restart on code changes, Postgres on `localhost:5436`):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# API http://localhost:8020/docs · mock CRM http://localhost:8021/docs
+```
+
+The three repos use different dev ports, so they can run side by side.
+
 Tests (needs a Postgres; CI uses a service container):
 
 ```bash
